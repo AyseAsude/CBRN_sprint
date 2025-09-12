@@ -1,0 +1,5 @@
+.env
+__pychache__/
+*_output/
+src/__pycache__/*
+*.log
