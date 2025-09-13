@@ -110,7 +110,7 @@ def load_base_model(model_name: str, device: str = "auto"):
         model_name,
         dtype=torch.float16,
         device_map=device,
-        trust_remote_code=True
+        trust_remote_code=True,
     )
     
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)

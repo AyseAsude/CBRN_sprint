@@ -28,23 +28,23 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_test_data(test_data_config: dict, tokenizer, batch_size: int = 16, max_length: int = 2048):
+def load_test_data(test_data_config: dict, tokenizer, batch_size: int = 16, max_length: int = 2048, use_output: bool = True):
     """Load test dataset from separate benign and harmful files and create dataloader."""
     import random
-    
+
     benign_path = test_data_config['benign']
     harmful_path = test_data_config['harmful']
-    
+
     logger.info(f"Loading benign test data from {benign_path}")
     benign_data = load_dataset(benign_path)
-    
+
     logger.info(f"Loading harmful test data from {harmful_path}")
     harmful_data = load_dataset(harmful_path)
-    
+
     # Add labels
     for sample in benign_data:
         sample['harmful'] = 0
-    
+
     for sample in harmful_data:
         sample['harmful'] = 1
     
@@ -54,7 +54,7 @@ def load_test_data(test_data_config: dict, tokenizer, batch_size: int = 16, max_
     
     logger.info(f"Test set: {len(test_data)} samples (benign: {len(benign_data)}, harmful: {len(harmful_data)})")
     
-    test_dataset = ProbeDataset(test_data, tokenizer, max_length)
+    test_dataset = ProbeDataset(test_data, tokenizer, max_length, use_output=use_output)
     
     test_loader = DataLoader(
         test_dataset,
@@ -115,11 +115,15 @@ def test_probe(config_path: str):
     logger.info(f"Model loaded successfully")
     logger.info(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
     
+    # Check if use_output is specified in config, default to True for backward compatibility
+    use_output = config['data'].get('use_output', True)
+
     test_loader, _ = load_test_data(
         test_data_config=test_data_config,
         tokenizer=tokenizer,
         batch_size=config['training']['batch_size'],
-        max_length=config['model']['max_length']
+        max_length=config['model']['max_length'],
+        use_output=use_output
     )
     
     logger.info("Starting evaluation on test set")
