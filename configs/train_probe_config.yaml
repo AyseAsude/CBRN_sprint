@@ -16,8 +16,8 @@ training:
   patience: 5
 
 data:
-  benign_path: "datasets/alpaca_benign.json"
-  harmful_path: "datasets/processed_sorry_bench_harmful_all.json"
+  benign_path: "datasets/alpaca_benign_train.json"
+  harmful_path: "datasets/processed_sorry_bench_harmful_train.json"
   val_split: 0.2
 
 seed: 42

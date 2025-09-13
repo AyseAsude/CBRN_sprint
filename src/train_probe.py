@@ -6,12 +6,12 @@ from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup
 from tqdm.auto import tqdm
 import logging
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import json
 from datetime import datetime
 from data_utils import load_config_and_data
 from models import create_probe_model
 from visualize_training import plot_training_metrics
+from evaluation import evaluate_model
 
 
 
@@ -32,51 +32,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
-def evaluate_model(model, dataloader):
-    """Evaluate model on given dataloader."""
-    model.eval()
-    total_loss = 0
-    all_preds = []
-    all_labels = []
-    all_probs = []
-    
-    device = next(model.classifier.parameters()).device
-    
-    with torch.no_grad():
-        for batch in tqdm(dataloader, desc="Evaluating"):
-
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"].to(device)
-            
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs["logits"]
-            
-            loss = F.cross_entropy(logits, labels)
-            total_loss += loss.item()
-            
-            probs = F.softmax(logits, dim=-1)
-            preds = torch.argmax(logits, dim=-1)
-            
-            all_preds.extend(preds.cpu().tolist())
-            all_labels.extend(labels.cpu().tolist())
-            all_probs.extend(probs[:, 1].cpu().tolist()) 
-    
-    avg_loss = total_loss / len(dataloader)
-    accuracy = accuracy_score(all_labels, all_preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='binary')
-    
-    return {
-        "loss": avg_loss,
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "predictions": all_preds,
-        "probabilities": all_probs,
-        "labels": all_labels
-    }
 
 
 def train_probe(config_path: str):

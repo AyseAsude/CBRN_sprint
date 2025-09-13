@@ -58,8 +58,11 @@ def plot_training_metrics(results_file: str, output_dir: str = None):
     print(f"Best validation F1: {results['best_val_f1']:.4f}")
     print(f"Final validation loss: {val_losses[-1]:.4f}")
     print(f"Final validation accuracy: {val_accuracies[-1]:.4f}")
-    print(f"Test accuracy: {results['test_metrics']['accuracy']:.4f}")
-    print(f"Test F1: {results['test_metrics']['f1']:.4f}")
+    
+    # Only print test metrics if they exist (from test_results.json)
+    if 'test_metrics' in results:
+        print(f"Test accuracy: {results['test_metrics']['accuracy']:.4f}")
+        print(f"Test F1: {results['test_metrics']['f1']:.4f}")
 
 
 def main():
