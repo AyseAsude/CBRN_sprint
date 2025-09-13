@@ -41,8 +41,8 @@ def train_probe(config_path: str):
     # Load config and data
     config, tokenizer, train_loader, val_loader = load_config_and_data(config_path)
     
-    # Create output directory
-    output_dir = config['output_path']
+    # Create output directory with timestamp
+    output_dir = config['output_path'].rstrip('/') + f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     os.makedirs(output_dir, exist_ok=True)
     
     # Save config
