@@ -1,5 +1,5 @@
 test_data:
-  benign: "datasets/alpaca_benign_test.json"
-  harmful: "datasets/processed_sorry_bench_harmful_test.json"
+  benign: ["datasets/alpaca_benign_test.json"]
+  harmful: ["datasets/processed_sorry_bench_harmful_test.json"]
 
 checkpoint_dir: "llama_output"

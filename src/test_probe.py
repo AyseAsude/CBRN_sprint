@@ -32,14 +32,24 @@ def load_test_data(test_data_config: dict, tokenizer, batch_size: int = 16, max_
     """Load test dataset from separate benign and harmful files and create dataloader."""
     import random
 
-    benign_path = test_data_config['benign']
-    harmful_path = test_data_config['harmful']
+    benign_paths = test_data_config['benign']
+    harmful_paths = test_data_config['harmful']
 
-    logger.info(f"Loading benign test data from {benign_path}")
-    benign_data = load_dataset(benign_path)
+    # Load all benign data
+    benign_data = []
+    for path in benign_paths:
+        logger.info(f"Loading benign test data from {path}")
+        data = load_dataset(path)
+        benign_data.extend(data)
+        logger.info(f"  Loaded {len(data)} samples from {path}")
 
-    logger.info(f"Loading harmful test data from {harmful_path}")
-    harmful_data = load_dataset(harmful_path)
+    # Load all harmful data
+    harmful_data = []
+    for path in harmful_paths:
+        logger.info(f"Loading harmful test data from {path}")
+        data = load_dataset(path)
+        harmful_data.extend(data)
+        logger.info(f"  Loaded {len(data)} samples from {path}")
 
     # Add labels
     for sample in benign_data:
