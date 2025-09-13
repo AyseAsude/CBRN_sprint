@@ -10,10 +10,10 @@ classifier:
 training:
   batch_size: 4
   learning_rate: 0.001
-  num_epochs: 50
+  num_epochs: 15
   warmup_ratio: 0.1
   weight_decay: 0.01
-  patience: 15
+  patience: 5
 
 data:
   benign_path: "datasets/alpaca_benign.json"
