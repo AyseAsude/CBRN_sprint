@@ -4,9 +4,9 @@ import pandas as pd
 from datasets import load_dataset as hf_load
 
 from src.llamaguard_eval.authenticate_hf import authenticate
-from models import load_llama_guard, classify_instruction_answer
-from parser import parse_output
-from utils import save_results, normalize_dataset
+from src.llamaguard_eval.models import load_llama_guard, classify_instruction_answer
+from src.llamaguard_eval.parser import parse_output
+from src.llamaguard_eval.utils import save_results, normalize_dataset
 
 
 def load_dataset(path: str, file_type: str = "csv", split: str = "train"):
