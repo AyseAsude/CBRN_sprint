@@ -1,5 +1,3 @@
-test_data:
-  benign: ["datasets/alpaca_benign_test.json"]
-  harmful: ["datasets/processed_sorry_bench_harmful_test.json"]
-
-checkpoint_dir: "llama_output"
+input_json_path: "mistral_output_20250914_202359/mistral_generated_outputs_llamaguard_eval.json"
+output_json_path: "mistral_output_20250914_202359/mistral_generated_outputs_finalized.json"
+checkpoint_dir: "mistral_output_20250914_202359"
