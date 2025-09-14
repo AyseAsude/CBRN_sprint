@@ -209,7 +209,7 @@ def load_dynamic_test_data(test_data_config, generation_config, tokenizer, base_
     return test_loader, test_dataset.generated_data
 
 
-def test_probe_dynamic(config_path: str):
+def test_probe_dynamic(config_path: str, checkpoint_override: str = None):
     """Main testing function for dynamic probe evaluation."""
     logger.info("Starting Dynamic Probe model testing")
 
@@ -220,19 +220,24 @@ def test_probe_dynamic(config_path: str):
         logger.error("test_data not found in config. Please add it to your config file.")
         raise ValueError("test_data missing from config")
 
-    if 'checkpoint_dir' not in test_config:
-        logger.error("checkpoint_dir not found in config. Please add it to your config file.")
-        raise ValueError("checkpoint_dir missing from config")
-
     test_data_config = test_config['test_data']
-    checkpoint_dir = test_config['checkpoint_dir']
 
-    checkpoint_path = os.path.join(checkpoint_dir, "best_model.pt")
+    # Determine checkpoint path
+    if checkpoint_override:
+        checkpoint_path = checkpoint_override
+        checkpoint_dir = os.path.dirname(checkpoint_path)
+        logger.info(f"Using checkpoint override: {checkpoint_path}")
+        # For layer-wise checkpoints, config is in parent directory
+        parent_dir = os.path.dirname(checkpoint_dir)
+        training_config_path = os.path.join(parent_dir, "config.yaml")
+    else:
+        checkpoint_dir = test_config['checkpoint_dir']
+        checkpoint_path = os.path.join(checkpoint_dir, "best_model.pt")
+        training_config_path = os.path.join(checkpoint_dir, "config.yaml")
+
     if not os.path.exists(checkpoint_path):
         logger.error(f"Model checkpoint not found at {checkpoint_path}")
         raise FileNotFoundError(f"Model checkpoint not found at {checkpoint_path}")
-
-    training_config_path = os.path.join(checkpoint_dir, "config.yaml")
 
     if os.path.exists(training_config_path):
         logger.info(f"Loading training config from {training_config_path}")
@@ -320,7 +325,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Test Probe Model with Dynamic Generation")
     parser.add_argument("--config", type=str, help="Path to configuration file")
+    parser.add_argument("--checkpoint", type=str, default=None,
+                        help="Path to checkpoint file (overrides checkpoint_dir from config)")
 
     args = parser.parse_args()
 
-    test_probe_dynamic(args.config)
+    test_probe_dynamic(args.config, checkpoint_override=args.checkpoint)
