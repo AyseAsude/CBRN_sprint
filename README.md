@@ -2,7 +2,7 @@
 
 ## Overview
 
-We developed a probe-based approach for detecting harmful content in large language model (LLM) representations. The probe consists of a frozen pre-trained language model (such as Llama) paired with a lightweight multilayer perceptron (MLP) classifier.
+We developed a probe-based approach for detecting harmful CBRN content in large language model (LLM) representations. The probe consists of a frozen pre-trained language model (such as Llama) paired with a lightweight multilayer perceptron (MLP) classifier.
 
 ## Methodology
 
@@ -10,7 +10,7 @@ We developed a probe-based approach for detecting harmful content in large langu
 
 Our approach leverages the internal representations of pre-trained language models without requiring any modifications to the base model. The process works as follows:
 
-1. **Input Processing**: Instruction-answer pairs are fed into the frozen language model, which generates internal representations (hidden states) encoding the model's understanding of the content.
+1. **Input Processing**: Instruction-answer pairs are fed into the frozen language model, which generates internal representations (hidden states).
 
 2. **Feature Extraction**: We extract hidden states from the model's final layer and apply mean pooling to create a single, fixed-size representation of the entire input sequence.
 
@@ -36,19 +36,39 @@ We used [Sorry Bench](https://github.com/sorry-bench/sorry-bench) as the primary
 
 ### Benign Content
 For benign training samples, we utilized:
-- **Training subset**: [CBRN-Finetuning dataset](https://huggingface.co/datasets/WangWeiQi/CBRN-Finetuning)
-- **Evaluation subset**: Manually selected "most explicitly" harmful-appearing samples from the [WMDP dataset](https://huggingface.co/datasets/cais/wmdp)
+- **A subset of**: [CBRN-Finetuning dataset](https://huggingface.co/datasets/WangWeiQi/CBRN-Finetuning)
+- **A subset of refusal samples**: [Sorry Bench](https://github.com/sorry-bench/sorry-bench) where models decline to answer harmful requests
 
-## Current Limitations
+### Test set
+- **A subset of**: [CBRN-Finetuning dataset](https://huggingface.co/datasets/WangWeiQi/CBRN-Finetuning)
+- **A subset of WMDP**: Manually selected "most explicitly" harmful-appearing samples from the [WMDP dataset](https://huggingface.co/datasets/cais/wmdp)
 
-### Out-of-Distribution Robustness
-To maximize CBRN-related content in our training data, we excluded HarmBench samples where LLMs refused to answer. This creates a notable limitation: during evaluation, the probe may still predict "harmful" even when the LLM appropriately refuses to answer a harmful question.
+## Evaluation
 
-We think that this behavior likely stems from:
-1. **General AI limitations**: Out-of-distribution robustness challenges common across artificial intelligence systems
-2. **Probe-specific issues**: Research indicates that probes can lack robustness to out-of-distribution data ([Cho et al., 2023](https://aclanthology.org/2023.starsem-1.21.pdf))
+Due to time constraints during this sprint, we limited the size of our test set to enable timely evaluation.
 
-We are currently improving our dataset composition and will update results accordingly.
+We used [Llama Guard 3](https://huggingface.co/meta-llama/Llama-Guard-3-8B) to generate ground truth safety labels for our evaluation. The process worked as follows:
+
+- Answer Generation: Each model (Mistral and Llama) generated responses to the same set of test questions from WMDP and CBRN datasets
+- Safety Classification: Llama Guard evaluated each unique question-answer pair, classifying them as either "safe" or "unsafe"
+- Ground Truth Assignment: Llama Guard's classifications were treated as ground truth labels for probe evaluation
+
+### Overall Test Set Composition
+
+| Model | Total Examples | Safe Examples | Unsafe Examples | Safe % | Unsafe % |
+|-------|----------------|---------------|-----------------|--------|----------|
+| Mistral | 167 | 148 | 19 | 88.6% | 11.4% |
+| Llama | 167 | 163 | 4 | 97.6% | 2.4% |
+
+### Test Set Breakdown by Dataset
+
+| Model | Dataset | Examples | Safe | Unsafe | Safe % | Unsafe % |
+|-------|---------|----------|------|--------|--------|----------|
+| Mistral | WMDP | 117 | 98 | 19 | 83.8% | 16.2% |
+| Mistral | CBRN | 50 | 50 | 0 | 100.0% | 0.0% |
+| Llama | WMDP | 117 | 113 | 4 | 96.6% | 3.4% |
+| Llama | CBRN | 50 | 50 | 0 | 100.0% | 0.0% |
+
 
 ## Results
 
@@ -63,17 +83,38 @@ We are currently improving our dataset composition and will update results accor
 ![Confusion Matrices](plots/2_confusion_matrices.png)
 *Figure 3: Confusion matrices showing detailed classification performance*
 
----
 
-**Note**: Results are preliminary and will be updated as we refine our dataset and methodology.
+### Limitations
 
-## Llama Guard Evaluation
+A critical limitation of our evaluation is the severe class imbalance in the test set. Llama Guard classified only 2.4% (4/167) of Llama-generated responses and 11.4% (19/167) of Mistral-generated responses as unsafe. This imbalance makes it difficult to assess true positive rate reliability, as conclusions about harmful content detection are based on very few examples.
 
-To evaluate using Llama Guard:
+## Future Work
+
+Repeating this work with larger datasets would provide more stable metrics and stronger conclusions. Due to time constraints, we had to limit both training and testing dataset sizes. While the probe shows promise, evaluation remains limited by dataset imbalance. Nevertheless, training probes is significantly faster and cheaper than training LLMs, providing a low-barrier entry point for safety applications.
+
+## Usage
+
+### Training a probe:
+```bash
+python src/train_probe.py --config configs/train_probe_config.yaml
+```
+
+### Generating answers for testing:
+```bash
+python src/test_probe_dynamic.py --config configs/test_probe_dynamic_config.yaml
+```
+
+### To evaluate using Llama Guard:
 
 ```bash
 python -m src.llamaguard_eval.main \
-    --dataset_path ./test_predictions_dynamic.json \
+    --dataset_path ./generated_answers.json \
     --dataset_type json \
     --models meta-llama/Llama-Guard-3-8B
+```
+
+### Testing generated question-answer pairs with probe predictions:
+
+```bash
+python src/test_probe.py --config configs/test_probe_config.yaml
 ```
