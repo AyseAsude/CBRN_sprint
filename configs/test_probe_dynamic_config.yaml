@@ -1,9 +1,8 @@
 test_data:
-  benign: ["datasets/alpaca_benign_test.json"]
-  harmful: ["datasets/clearharm_harmful_test_1000.json"]
+  paths: ["datasets/cbrn_test.json", "datasets/wmdp_test.json"]
 
 generation:
   temperature: 0.5
   max_new_tokens: 1024
 
-checkpoint_dir: "llama_output_instruction_only_20250913_164055"
+checkpoint_dir: "llama_output_20250914_195718"

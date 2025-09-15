@@ -16,10 +16,10 @@ training:
   patience: 5
 
 data:
-  benign_path: ["datasets/alpaca_benign_train.json", "datasets/processed_sorry_bench_refusal_train_500.json"]
-  harmful_path: ["datasets/processed_sorry_bench_harmful_train.json"]
-  val_split: 0.2
-  use_output: false  # Set to false to use instruction only, true to use instruction + output
+  benign_path: ["datasets/cbrn_train.json"]
+  harmful_path: ["datasets/harmful_train.json"]
+  val_split: 0.1
+  use_output: false
 
 seed: 42
 output_path: "llama_output_instruction_only/"

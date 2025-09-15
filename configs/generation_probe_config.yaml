@@ -1,0 +1,28 @@
+model:
+  name: "meta-llama/Llama-3.1-8B-Instruct"
+  max_length: 1024
+  device: "auto"
+
+classifier:
+  hidden_sizes: [256, 128, 64]
+  dropout_prob: 0.1
+
+training:
+  batch_size: 8
+  learning_rate: 0.001
+  num_epochs: 10
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  patience: 5
+
+data:
+  benign_path: ["datasets/alpaca_benign_train.json", "datasets/processed_sorry_bench_refusal_train_500.json"]
+  harmful_path: ["datasets/processed_sorry_bench_harmful_train.json"]
+  val_split: 0.2
+
+# Generation probe specific settings
+layer_idx: -4  # Which layer to extract features from (negative = from end)
+window_size: 15  # Number of recent tokens to pool
+step_size: 10  # Check every N tokens instead of every token
+max_training_samples: 1000
+seed: 42

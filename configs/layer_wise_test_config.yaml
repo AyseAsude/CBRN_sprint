@@ -1,10 +1,10 @@
 test_data:
-  benign: ["datasets/temp_test_benign.json"]
-  harmful: ["datasets/temp_test_harm.json"]
+  benign: ["datasets/alpaca_benign_test.json", "datasets/refusal_test.json"]
+  harmful: ["datasets/harmful_test.json"]
 
 generation:
   temperature: 0.5
   max_new_tokens: 1024
 
-checkpoint_dir: "layer_wise_analysis_20250913_234433"
-layers: [0, 30, 31]
+checkpoint_dir: "layer_wise_analysis_20250914_161010"
+layers: [0, 8, 12, 16, 20, 24, 28, 31]

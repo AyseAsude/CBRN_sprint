@@ -1,6 +1,6 @@
 model:
   name: "meta-llama/Llama-3.1-8B-Instruct"
-  max_length: 2048
+  max_length: 1024
   device: "auto"
 
 classifier:
@@ -8,7 +8,7 @@ classifier:
   dropout_prob: 0.1
 
 training:
-  batch_size: 32
+  batch_size: 16
   learning_rate: 0.001
   num_epochs: 10
   warmup_ratio: 0.1
@@ -16,13 +16,14 @@ training:
   patience: 3
 
 data:
-  benign_path: ["datasets/alpaca_benign_train.json", "datasets/processed_sorry_bench_refusal_train_500.json"]
-  harmful_path: ["datasets/processed_sorry_bench_harmful_train.json"]
-  val_split: 0.2
+  benign_path: ["datasets/refusal_train.json", "datasets/alpaca_benign_train.json"]
+  harmful_path: ["datasets/harmful_train.json"]
+  val_split: 0.1
+  use_output: true
 
 seed: 42
 
 # Specify which layers to test
 # If not specified, will test every 4th layer plus last 4 layers
 # For Llama-3.1-8B (32 layers), uncomment the line below:
-layers: [0, 4, 8, 12, 16, 20, 24, 28, 29, 30, 31]
+layers: [0, 8, 12, 16, 20, 24, 28, 31]

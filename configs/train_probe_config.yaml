@@ -1,5 +1,5 @@
 model:
-  name: "meta-llama/Llama-3.1-8B-Instruct"
+  name: "mistralai/Mistral-7B-Instruct-v0.2" # mistralai/Mistral-7B-Instruct-v0.2
   max_length: 2048
   device: "auto"
 
@@ -16,10 +16,10 @@ training:
   patience: 5
 
 data:
-  benign_path: ["datasets/alpaca_benign_train.json", "datasets/processed_sorry_bench_refusal_train_500.json"]
-  harmful_path: ["datasets/processed_sorry_bench_harmful_train.json"]
-  val_split: 0.2
+  benign_path: ["datasets/cbrn_train.json"]
+  harmful_path: ["datasets/harmful_train.json"]
+  val_split: 0.1
   use_output: true
 
 seed: 42
-output_path: "llama_output/"
+output_path: "mistral_output/"
