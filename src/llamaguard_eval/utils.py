@@ -5,6 +5,7 @@ def normalize_dataset(dataset):
     """
     Normalize dataset field names into 'instruction' and 'answer'.
     Auto-detects variations like 'prompt', 'response', 'question', 'output', etc.
+    Preserves all other fields including 'dataset_source'.
     """
     instruction_keys = ["instruction", "prompt", "input", "question", "query", "text"]
     answer_keys = ["answer", "response", "output", "completion", "label"]
@@ -32,9 +33,27 @@ def normalize_dataset(dataset):
         if instr is None or ans is None:
             raise ValueError(f"Could not map fields in row: {row}")
 
-        normalized.append({"instruction": instr, "answer": ans})
+        # Create normalized entry with instruction and answer
+        normalized_entry = {"instruction": instr, "answer": ans}
+
+        # Preserve all other fields from the original row
+        for key, value in row.items():
+            if key not in instruction_keys + answer_keys + ["instruction", "answer"]:
+                normalized_entry[key] = value
+
+        normalized.append(normalized_entry)
 
     return normalized
+
+
+def save_results_json(results, output_path):
+    """
+    Save evaluation results to JSON only.
+    """
+    with open(output_path, "w") as f:
+        json.dump(results, f, indent=2)
+
+    print(f"Saved {len(results)} results to {output_path}")
 
 
 def save_results(results, output_prefix="results"):

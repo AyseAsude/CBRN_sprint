@@ -8,7 +8,7 @@ def load_llama_guard(checkpoint_path: str, device: str = "cuda", dtype=torch.bfl
     tokenizer = AutoTokenizer.from_pretrained(checkpoint_path)
     model = AutoModelForCausalLM.from_pretrained(
         checkpoint_path,
-        torch_dtype=dtype,
+        dtype=dtype,
         device_map=device
     )
     return tokenizer, model
