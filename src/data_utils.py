@@ -198,14 +198,9 @@ def load_config_and_data(config_path: str):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # Handle both single path (string) and multiple paths (list) for backward compatibility
     benign_paths = config['data']['benign_path']
-    if isinstance(benign_paths, str):
-        benign_paths = [benign_paths]
+    harmful_paths = config['data']['harmful_path']
 
-    harmful_paths = config['data'].get('harmful_path') or config['data'].get('harmful', [])
-    if isinstance(harmful_paths, str):
-        harmful_paths = [harmful_paths]
 
     train_data, val_data = load_combined_dataset(benign_path=benign_paths,
                                                 harmful_path=harmful_paths,

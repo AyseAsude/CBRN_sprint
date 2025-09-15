@@ -8,7 +8,6 @@ from datetime import datetime
 from tqdm.auto import tqdm
 from data_utils import load_dataset
 from models import create_probe_model
-from evaluation import evaluate_model, print_test_metrics
 
 
 log_filename = f"testing_probe_dynamic_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class DynamicProbeDataset(Dataset):
-    """Dataset for dynamic probe evaluation - only questions provided, answers generated."""
+    """Dataset for dynamic generation - only questions provided, answers generated."""
 
     def __init__(self, data, tokenizer, base_model, max_length=2048, temperature=0.7, max_new_tokens=1024):
         self.questions = data
@@ -89,21 +88,24 @@ class DynamicProbeDataset(Dataset):
                     eos_token_id=self.tokenizer.eos_token_id
                 )
 
-            # Decode answer
-            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            input_length = inputs['input_ids'].shape[1]
+            generated_tokens = outputs[0][input_length:]
+            answer = self.tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
 
-            # Extract only the assistant's response
-            if prompt in generated_text:
-                answer = generated_text[len(prompt):].strip()
-            else:
-                # Handle case where prompt might have been modified during generation
-                answer = generated_text.split(question)[-1].strip()
+            # Additional cleanup: remove common assistant prefixes if they exist
+            prefixes_to_remove = ['assistant\n\n', 'assistant\n', 'assistant:', 'assistant ', 'Assistant\n\n', 'Assistant\n', 'Assistant:', 'Assistant ']
+            for prefix in prefixes_to_remove:
+                if answer.startswith(prefix):
+                    answer = answer[len(prefix):].strip()
+                    break
+            
+            dataset_source = item.get('dataset_source', 'unknown')
 
             # Store generated data
             self.generated_data.append({
                 'instruction': question,
                 'output': answer,
-                'harmful': item.get('harmful', 0)  # Keep original label if exists
+                'dataset_source': dataset_source
             })
 
         logger.info(f"Answer generation completed for {len(self.generated_data)} samples")
@@ -114,7 +116,7 @@ class DynamicProbeDataset(Dataset):
     def __getitem__(self, idx):
         item = self.generated_data[idx]
 
-        # Format as conversation for probe evaluation
+        # Format as conversation
         messages = [
             {"role": "user", "content": item['instruction']},
             {"role": "assistant", "content": item['output']}
@@ -127,7 +129,7 @@ class DynamicProbeDataset(Dataset):
             add_generation_prompt=False
         )
 
-        # Tokenize for probe
+        # Tokenize
         encoding = self.tokenizer(
             text,
             truncation=True,
@@ -140,7 +142,6 @@ class DynamicProbeDataset(Dataset):
         return {
             "input_ids": encoding["input_ids"].squeeze(0),
             "attention_mask": encoding["attention_mask"].squeeze(0),
-            "labels": torch.tensor(int(item["harmful"]), dtype=torch.long),
             "text": text
         }
 
@@ -149,37 +150,25 @@ def load_dynamic_test_data(test_data_config, generation_config, tokenizer, base_
     """Load test dataset and generate answers dynamically."""
     import random
 
-    benign_paths = test_data_config['benign']
-    harmful_paths = test_data_config['harmful']
+    all_paths = test_data_config['paths']
 
-    # Load all benign data
-    benign_data = []
-    for path in benign_paths:
-        logger.info(f"Loading benign test questions from {path}")
+    all_data = []
+    for path in all_paths:
+        logger.info(f"Loading test questions from {path}")
         data = load_dataset(path)
-        benign_data.extend(data)
+        
+        # Add dataset source to each item
+        dataset_name = os.path.basename(path)  # or use the full path if you prefer
+        for item in data:
+            item['dataset_source'] = dataset_name
+        
+        all_data.extend(data)
         logger.info(f"  Loaded {len(data)} samples from {path}")
-
-    # Load all harmful data
-    harmful_data = []
-    for path in harmful_paths:
-        logger.info(f"Loading harmful test questions from {path}")
-        data = load_dataset(path)
-        harmful_data.extend(data)
-        logger.info(f"  Loaded {len(data)} samples from {path}")
-
-    # Add labels
-    for sample in benign_data:
-        sample['harmful'] = 0
-
-    for sample in harmful_data:
-        sample['harmful'] = 1
 
     # Combine and shuffle
-    test_data = benign_data + harmful_data
-    random.shuffle(test_data)
+    random.shuffle(all_data)
 
-    logger.info(f"Test set: {len(test_data)} questions (benign: {len(benign_data)}, harmful: {len(harmful_data)})")
+    logger.info(f"Test set: {len(all_data)} questions")
 
     # Create dynamic dataset (generates answers)
     if 'temperature' not in generation_config:
@@ -190,7 +179,7 @@ def load_dynamic_test_data(test_data_config, generation_config, tokenizer, base_
         raise ValueError("max_new_tokens missing from generation config")
 
     test_dataset = DynamicProbeDataset(
-        test_data,
+        all_data,
         tokenizer,
         base_model,
         max_length=max_length,
@@ -210,8 +199,8 @@ def load_dynamic_test_data(test_data_config, generation_config, tokenizer, base_
 
 
 def test_probe_dynamic(config_path: str, checkpoint_override: str = None):
-    """Main testing function for dynamic probe evaluation."""
-    logger.info("Starting Dynamic Probe model testing")
+    """Main function for dynamic generation."""
+    logger.info("Starting Dynamic generation")
 
     with open(config_path, 'r') as f:
         test_config = yaml.safe_load(f)
@@ -249,15 +238,8 @@ def test_probe_dynamic(config_path: str, checkpoint_override: str = None):
         raise FileNotFoundError(f"Training config not found at {training_config_path}")
 
 
-    # Create model with base model for generation
+    # Create model for generation
     model, tokenizer = create_probe_model(config)
-
-    logger.info(f"Loading model checkpoint from {checkpoint_path}")
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
-    model.classifier.load_state_dict(checkpoint['classifier_state_dict'])
-
-    base_model_device = next(model.base_model.parameters()).device
-    model.classifier = model.classifier.to(base_model_device)
 
     logger.info(f"Model loaded successfully")
     logger.info(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
@@ -275,55 +257,37 @@ def test_probe_dynamic(config_path: str, checkpoint_override: str = None):
         max_length=config['model']['max_length']
     )
 
-    logger.info("Starting evaluation on dynamically generated test set")
-    test_metrics = evaluate_model(model, test_loader, detailed=True)
+    logger.info("Generation completed")
 
-    print_test_metrics(test_metrics)
+    # Save generated outputs
+    output_dir = test_config.get('checkpoint_dir')
+    os.makedirs(output_dir, exist_ok=True)
 
-    test_results = {
-        'config': config,
-        'test_metrics': test_metrics,
-        'checkpoint_metrics': checkpoint.get('val_metrics', {}),
-        'model_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad),
-        'test_timestamp': datetime.now().isoformat(),
-        'dynamic_generation': True,
+    outputs_file = os.path.join(output_dir, f"generated_outputs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+
+    output_data = {
         'generation_params': {
             'temperature': generation_config['temperature'],
             'max_new_tokens': generation_config['max_new_tokens']
-        }
+        },
+        'config': test_config,
+        'timestamp': datetime.now().isoformat(),
+        'total_samples': len(generated_data),
+        'outputs': generated_data
     }
 
-    results_file = os.path.join(checkpoint_dir, "test_results_dynamic.json")
-    with open(results_file, 'w') as f:
-        json.dump(test_results, f, indent=2)
+    with open(outputs_file, 'w') as f:
+        json.dump(output_data, f, indent=2)
 
-    logger.info(f"Test results saved to {results_file}")
+    logger.info(f"Generated outputs saved to {outputs_file}")
 
-    # Save predictions with generated answers
-    predictions_file = os.path.join(checkpoint_dir, "test_predictions_dynamic.json")
-    predictions_data = []
-    for i in range(len(test_metrics['labels'])):
-        predictions_data.append({
-            'index': i,
-            'instruction': generated_data[i]['instruction'],
-            'generated_answer': generated_data[i]['output'],
-            'true_label': test_metrics['labels'][i],
-            'predicted_label': test_metrics['predictions'][i],
-            'harmful_probability': test_metrics['probabilities'][i]
-        })
-
-    with open(predictions_file, 'w') as f:
-        json.dump(predictions_data, f, indent=2)
-
-    logger.info(f"Detailed predictions with generated answers saved to {predictions_file}")
-
-    return test_results
+    return output_data
 
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Test Probe Model with Dynamic Generation")
+    parser = argparse.ArgumentParser(description="Dynamic Text Generation")
     parser.add_argument("--config", type=str, help="Path to configuration file")
     parser.add_argument("--checkpoint", type=str, default=None,
                         help="Path to checkpoint file (overrides checkpoint_dir from config)")
