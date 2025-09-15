@@ -18,7 +18,7 @@ Our approach leverages the internal representations of pre-trained language mode
 
 ### Theoretical Foundation
 
-This approach builds on findings in the literature showing that language models' internal representations contain sufficient information about content properties for simple classifiers to make accurate distinctions ([McKenzie1 et al., 2025](https://arxiv.org/abs/2506.10805); [Patel and Wang, 2024](https://openreview.net/pdf?id=qbvtwhQcH5)). The classifier learns to identify patterns in how the language model internally represents harmful versus benign content, maintaining computational efficiency through the lightweight classification head.
+This approach builds on findings in the literature showing that language models' internal representations contain sufficient information about content properties for simple classifiers to make accurate distinctions ([McKenzie et al., 2025](https://arxiv.org/abs/2506.10805); [Patel and Wang, 2024](https://openreview.net/pdf?id=qbvtwhQcH5)). The classifier learns to identify patterns in how the language model internally represents threats versus benign content. This targeted approach enables the detection of dual-use information and potential CBRN hazards in language model outputs without requiring extensive computational resources, maintaining computational efficiency through the lightweight classification head.
 
 ## Models
 
@@ -66,3 +66,14 @@ We are currently improving our dataset composition and will update results accor
 ---
 
 **Note**: Results are preliminary and will be updated as we refine our dataset and methodology.
+
+## Llama Guard Evaluation
+
+To evaluate using Llama Guard:
+
+```bash
+python -m src.llamaguard_eval.main \
+    --dataset_path ./test_predictions_dynamic.json \
+    --dataset_type json \
+    --models meta-llama/Llama-Guard-3-8B
+```
